@@ -1,0 +1,133 @@
+/* ==========================================
+   1. 基本レイアウト & 共通背景
+   ========================================== */
+body {
+  font-family: "Mochiy Pop One", sans-serif;
+  background: #fff0f5; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  color: #555;
+}
+
+.box {
+  background: white;
+  padding: 25px 20px;
+  border-radius: 20px; /* 少し角を丸く */
+  text-align: center;
+  max-width: 550px;
+  width: 90%; /* 左右に少し余白を作る */
+  box-shadow: 0 10px 30px rgba(255, 105, 180, 0.15); /* ピンクがかった柔らかい影 */
+  margin: auto;
+  position: relative;
+  border: 4px solid #fff; /* 箱自体にも白フチをつけてクッキリさせる */
+}
+
+body.locked { position: fixed; width: 100%; height: 100dvh; overflow: hidden; }
+body.locked .box { max-height: 90vh; overflow-y: auto; }
+body.scroll-page { height: auto; min-height: 100vh; align-items: flex-start; padding-top: 20px; }
+
+/* ==========================================
+   2. タイトル & ロゴ共通設定
+   ========================================== */
+.title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 25px;
+  font-size: 1.5rem;
+  color: #ff69b2;
+  text-shadow: 2px 2px 0 #fff;
+  letter-spacing: 0.05em;
+}
+.site-logo {
+  width: 100%;
+  max-width: 300px; 
+  height: auto;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+}
+.title-sub {
+  display: block;
+  font-family: "Mochiy Pop One", sans-serif;
+  font-size: 1.8rem;
+  line-height: 1.3;
+  transform: rotate(-1deg);
+}
+.title-sub span {
+  display: inline-block;
+  animation: bounce 2s ease-in-out infinite;
+  text-shadow: 2px 2px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 3px 3px 0 rgba(0,0,0,0.1);
+}
+/* タイトルの色分け */
+.title-sub span:nth-child(4n+1) { color: #ff69b2; }
+.title-sub span:nth-child(4n+2) { color: #4ecdc4; }
+.title-sub span:nth-child(4n+3) { color: #ffbe0b; }
+.title-sub span:nth-child(4n+4) { color: #ff006e; }
+
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+/* ==========================================
+   3. ボタン共通（立体的・ポップ）
+   ========================================== */
+button, .submit, .member-btn {
+  font-family: "Mochiy Pop One", sans-serif;
+  width: 85%;
+  max-width: 280px;
+  display: block;
+  margin: 12px auto;
+  font-size: 1.0rem;
+  font-weight: normal;
+  padding: 14px 16px;
+  background-color: #ff69b2;
+  border: 3px solid #fff;
+  /* 修正：outlineが個別の色指定を邪魔していたので、少し調整 */
+  outline: 2px solid transparent; 
+  color: #fff;
+  border-radius: 50px; /* ボタンは思い切り丸い方が可愛い */
+  box-shadow: 0 4px 0px #d81b60; /* 影を真下に少し厚く */
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  top: 0;
+  text-decoration: none;
+}
+
+/* ホバーで少し浮く演出を追加 */
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0px #d81b60;
+}
+
+button:active:not(:disabled) {
+  top: 3px;
+  box-shadow: 0 1px 0px #d81b60;
+  transform: translateY(0) scale(0.98);
+}
+
+button:disabled { background-color: #f0f0f0 !important; color: #888 !important; box-shadow: 0 2px 0px #ccc !important; cursor: not-allowed; border-color: #ddd !important; }
+
+/* 戻るボタンの基本共通設定 */
+.back-btn { 
+  background: #fff !important; 
+  color: #ff69b2 !important; 
+  border: 3px solid #ff69b2 !important; 
+  box-shadow: 0 4px 0px #ffc1e3 !important; 
+  width: 70% !important; 
+  max-width: 220px !important; 
+}
+.back-btn:active { box-shadow: 0 1px 0px #ffc1e3 !important; }
+
+/* ==========================================
+   4. レスポンシブ (共通)
+   ========================================== */
+.mobile-only { display: none; }
+@media (max-width: 480px) {
+  .mobile-only { display: inline; }
+  .title-sub { font-size: 1.4rem; }
+  .box { width: 92%; padding: 20px 15px; }
+  button, .submit, .back-btn { width: 85% !important; } /* スマホでも幅を保つ */
+}

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <title>検定結果 - 歌割り検定</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&display=swap" rel="stylesheet">
+</head>
+
+<style>
+  .rank-display { font-family: "Mochiy Pop One", sans-serif; font-size: 1.8rem; color: #ff69b2; margin: 20px 0; text-shadow: 2px 2px 0 #fff; }
+  .score-circle { width: 120px; height: 120px; border: 6px solid #ff69b2; border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 20px auto; background: #fff; box-shadow: 0 5px 15px rgba(255,105,178,0.2); }
+  .score-num { font-size: 2.5rem; font-weight: 900; color: #ff69b2; }
+  .share-btn { background: #000 !important; color: #fff !important; outline-color: #000 !important; box-shadow: 3px 3px 0px #333 !important; }
+  .info-badges {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+  .badge {
+    background: #fdfdfd;
+    border: 1px solid #ffb6c1;
+    color: #ff69b2;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+</style>
+
+<body class="locked">
+
+  <div class="box result-box">
+    <p class="result-label">あなたの検定結果は…</p>
+    <h2 id="rank" class="rank-display">判定中...</h2>
+
+    <div class="score-container">
+      <div class="score-circle">
+        <span id="correct-count" class="score-num">0</span>
+        <span class="score-unit">/ 10 問</span>
+      </div>
+    </div>
+
+    <div class="info-badges">
+      <span id="display-group" class="badge">---</span>
+      <span id="display-diff" class="badge">---</span>
+    </div>
+
+    <div class="message-area">
+      <p id="comment" class="comment-text"></p>
+    </div>
+
+    <div class="result-buttons">
+      <button id="share-btn" class="share-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+        </svg>
+        結果をXでつぶやく
+      </button>
+
+      <button class="start-btn" onclick="location.href='group.html'">もう一度あそぶ</button>
+      <button class="back-btn" onclick="location.href='index.html'">トップに戻る</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <script>
+    // 1. データの読み込み
+    const state = JSON.parse(localStorage.getItem("quizState"));
+
+    // ✨ 修正ポイント：より厳格なガード判定
+    // データがない、完走していない(isComplete)、または使い捨てトークン(resultToken)がない場合は追い返す
+    if (!state || !state.isComplete || !state.resultToken || state.isFinished) {
+      location.href = "index.html";
+      throw new Error("Invalid access"); 
+    }
+
+    // ✨ 重要：表示が始まった瞬間に「トークン」を消去し、「終了フラグ」を立てる
+    // これにより、この瞬間からこのデータは「使用済み」となり、リロードや戻るボタンで再表示できなくなります
+    const usedState = { ...state };
+    delete usedState.resultToken; // トークンを破棄
+    usedState.isComplete = false; // 完走フラグを下ろす
+    usedState.isFinished = true;  // 終了フラグを立てる
+    localStorage.setItem("quizState", JSON.stringify(usedState));
+
+    // --- 共通設定 ---
+    const difficultyMap = { 
+      "easy": "やさしい", 
+      "normal": "ふつう", 
+      "hard": "むずかしい",
+      "expert": "げきむず" 
+    };
+
+    // スコアはLocalStorageの確定値を使用
+    const correct = state.correctCount || 0;
+    const total = 10;
+    const rate = (correct / total) * 100;
+
+    // 2. グループ名と難易度の表示反映
+    document.getElementById("display-group").textContent = state.group || "---";
+    document.getElementById("display-diff").textContent = difficultyMap[state.difficulty] || state.difficulty;
+
+    // 3. カウントアップアニメーション
+    let displayNum = 0;
+    const countEl = document.getElementById("correct-count");
+    // 正解が0問の場合も考慮して、1問以上あるときだけタイマーを作動
+    if (correct > 0) {
+      const timer = setInterval(() => {
+        if (displayNum >= correct) {
+          clearInterval(timer);
+        } else {
+          displayNum++;
+          countEl.textContent = displayNum;
+        }
+      }, 100);
+    } else {
+      countEl.textContent = "0";
+    }
+
+    // 4. ランク判定ロジック
+    let rank = "";
+    let comment = "";
+
+    if (rate === 100) {
+      rank = "🌟神推し級🌟";
+      comment = "完璧です！全問正解！<br>あなたは間違いなく、このグループの歌割りを完全に理解していますね。";
+      launchConfetti();
+    } else if (rate >= 80) {
+      rank = "🥇物知り級";
+      comment = "すごい！ハイレベルな正解率です。<br>あと一歩で全問正解でした。惜しい！";
+    } else if (rate >= 50) {
+      rank = "🥈ファン級";
+      comment = "ナイス！よく知っていますね。<br>もっと聴き込めば、さらに正解が増えるはず！";
+    } else {
+      rank = "🥉ビギナー級";
+      comment = "まずは曲をたくさん聴いて、<br>メンバーの歌声を聞き分けてみましょう！";
+    }
+
+    document.getElementById("rank").textContent = rank;
+    document.getElementById("comment").innerHTML = comment;
+
+    // 5. 紙吹雪エフェクト
+    function launchConfetti() {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#ff69b2', '#ffb6c1', '#ffffff', '#4ecdc4']
+      });
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#ff69b2', '#ffb6c1']
+        });
+        confetti({
+          particleCount: 50,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#ff69b2', '#ffb6c1']
+        });
+      }, 500);
+    }
+
+    // 6. X（Twitter）シェア機能
+    document.getElementById("share-btn").onclick = () => {
+      const rankName = document.getElementById("rank").textContent;
+      const score = correct; // 表示用数値ではなく、確定した正解数を使用
+      const groupName = state.group; 
+      const diffName = difficultyMap[state.difficulty] || state.difficulty;
+      const siteUrl = "https://bunbunbunji.github.io/my-website/index.html";
+
+      const text = encodeURIComponent(
+        `歌割り検定の結果は…\n【${rankName}】でした！(正解：${score}/10問)\nグループ：${groupName}\n難易度：${diffName}\n${siteUrl}\n\n#KAWAIILAB歌割り検定`
+      );
+
+      const shareUrl = `https://twitter.com/intent/tweet?text=${text}`;
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    };
+  </script>
+
+
+</body>
+</html>
