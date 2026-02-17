@@ -310,7 +310,7 @@
     // 3. データ読み込み関数
     async function loadQuizzesAndMembers() {
       const { data: quizData, error: quizError } = await supabaseClient
-        .from("quizzes")
+        .from("quizzes_test")
         .select("*")
         .eq("group_name", quizState.group)
         .gt(quizState.difficulty, 0); 
