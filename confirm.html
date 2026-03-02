@@ -170,7 +170,7 @@
     <button class="back-btn" onclick="location.href='difficulty.html'">難易度選択に戻る</button>
   </div>
 
-<script>
+  <script>
     // ===== Supabase 設定 =====
     const supabaseUrl = "https://atinpqtedmrfrtdlkpkd.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0aW5wcXRlZG1yZnJ0ZGxrcGtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwOTU0NjcsImV4cCI6MjA4NDY3MTQ2N30.Oor6oUuuIxa0pSxIRuwEw7ZzGYM4hOGfywHqv2FaBHg";
@@ -183,76 +183,54 @@
       location.href = "group.html";
     }
 
+    // クラス名に影響を与えず中身だけ書き換える
     document.getElementById("group").textContent = state.group;
 
     const difficultyLabel = {
       easy: "やさしい",
       normal: "ふつう",
-      hard: "むずかしい",
-      expert: "げきむず"
+      hard: "むずかしい"
     };
     document.getElementById("difficulty").textContent = difficultyLabel[state.difficulty];
 
-    // ===== クイズ取得・抽選 =====
+    // ===== クイズ取得 =====
     async function prepareQuiz() {
-      console.log(`%c--- 🎲 抽選デバッグ開始 (${state.group} / ${state.difficulty}) ---`, "color: #ff69b2; font-weight: bold;");
-
       const { data, error } = await supabaseClient
-        .from("quizzes_test") // テスト用テーブル
-        .select(`id, ${state.difficulty}`)
+        .from("quizzes")
+        .select(`id, ${state.difficulty}`) // 難易度列（easy等）とその値を取得
         .eq("group_name", state.group)
-        .gt(state.difficulty, 0);
+        .gt(state.difficulty, 0); // 値が 0 より大きい（出題対象）ものを取得
 
       if (error || !data || data.length === 0) {
-        console.error("データ取得エラー:", error);
         document.getElementById("status").textContent = "問題が見つかりませんでした";
         return;
       }
 
       // --- 🚀 重み付き抽選ロジック ---
       const selectedIds = [];
-      const tempPool = [...data];
+      const tempPool = [...data]; // 取得したデータのコピー
       const maxQuestions = 10;
 
       for (let i = 0; i < maxQuestions && tempPool.length > 0; i++) {
+        // 全体の重みの合計を計算
         const totalWeight = tempPool.reduce((sum, q) => sum + q[state.difficulty], 0);
         let random = Math.random() * totalWeight;
         
+        // 重みに基づいて当選を決定
         for (let j = 0; j < tempPool.length; j++) {
           random -= tempPool[j][state.difficulty];
           if (random <= 0) {
             selectedIds.push(tempPool[j].id);
-            tempPool.splice(j, 1);
+            tempPool.splice(j, 1); // 同じ問題が選ばれないようにプールから削除
             break;
           }
         }
       }
 
-      // --- 📊 デバッグ表示の作成 ---
-      // 全データに対して、当選したかどうかの印（status）を付ける
-      const resultForConsole = data.map(item => {
-        const isWinner = selectedIds.includes(item.id);
-        return {
-          ID: item.id,
-          Weight: item[state.difficulty],
-          Result: isWinner ? "✅ WINNER" : "---"
-        };
-      });
-
-      // 表形式で全リストを表示
-      console.table(resultForConsole);
-
-      // 選ばれたIDを色付きで強調表示
-      console.log(
-        `%c✨ 当選したID一覧: ${selectedIds.join(", ")}`,
-        "color: #ffffff; background-color: #ff69b2; padding: 4px 8px; border-radius: 4px; font-weight: bold;"
-      );
-
-      // 状態の保存
       state.quizIds = selectedIds;
       localStorage.setItem("quizState", JSON.stringify(state));
+      // --- ここまで ---
 
-      // 画面表示の更新
       document.getElementById("status").textContent = `${state.quizIds.length}問のクイズを用意しました！`;
       document.getElementById("description").style.display = "block";
       const btn = document.getElementById("startBtn");
